@@ -6,7 +6,10 @@ import settings_window_ui
 import sys
 from PyQt5 import QtMultimedia
 
+
 class SettingsWindow(QtWidgets.QMainWindow):
+    submitted = QtCore.pyqtSignal([str, str, str])
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -26,8 +29,6 @@ class SettingsWindow(QtWidgets.QMainWindow):
         self.ui.short_break_length.setText(config.get('main', 'short break'))
         self.ui.long_break_length.setText(config.get('main', 'long break'))
 
-
-
     def save_settings(self):
         config = ConfigParser()
         config.read("config.ini")
@@ -37,6 +38,9 @@ class SettingsWindow(QtWidgets.QMainWindow):
         with open('config.ini', 'w') as f:
             config.write(f)
 
+        self.submitted.emit(self.ui.pomodoro_length.text(),
+                            self.ui.short_break_length.text(),
+                            self.ui.long_break_length.text())
         self.close()
 
 
@@ -63,8 +67,14 @@ class MainApp(QtWidgets.QMainWindow):
         self.ui.button.clicked.connect(self.start_timer)
         self.ui.actionSettings.triggered.connect(self.open_settings_window)
 
+    def change_times(self, study_time, short_break_time, long_break_time):
+        self.study_time = int(study_time)
+        self.short_break_time = int(short_break_time)
+        self.long_break_time = int(long_break_time)
+
     def open_settings_window(self):
         self.settings_dialog = SettingsWindow()
+        self.settings_dialog.submitted.connect(self.change_times)
 
     def setup_settings(self):
         config = ConfigParser()
@@ -113,7 +123,6 @@ class MainApp(QtWidgets.QMainWindow):
                     self.remaining_seconds = self.long_break_time
                 else:
                     self.remaining_seconds = self.short_break_time
-
                 self.last_countdown = "break"
                 self.studies_today += 1
                 self.ui.times_studied.setText(
@@ -155,8 +164,10 @@ class MainApp(QtWidgets.QMainWindow):
             self.ui.timer_display.setText(f"{minutes}:{seconds}")
             self.remaining_seconds -= 1
 
+
 def except_hook(cls, exception, traceback):
     sys.__excepthook__(cls, exception, traceback)
+
 
 if __name__ == "__main__":
     sys.excepthook = except_hook
