@@ -5,8 +5,8 @@ from PyQt5 import QtCore
 import settings_window_ui
 import sys
 from PyQt5 import QtMultimedia
-
-
+from datetime import date
+import json
 class SettingsWindow(QtWidgets.QMainWindow):
     submitted = QtCore.pyqtSignal([str, str, str])
 
@@ -24,7 +24,6 @@ class SettingsWindow(QtWidgets.QMainWindow):
     def load_settings(self):
         config = ConfigParser()
         config.read("config.ini")
-
         self.ui.pomodoro_length.setText(config.get('main', 'study time'))
         self.ui.short_break_length.setText(config.get('main', 'short break'))
         self.ui.long_break_length.setText(config.get('main', 'long break'))
@@ -60,10 +59,13 @@ class MainApp(QtWidgets.QMainWindow):
 
         self.beep_noise = "bugle_tune.wav"  # sound played
         self.last_countdown = ""
-        self.studies_today = 1
+
+        self.studies_today = self.read_studies_from_file()
         self.last_countdown = "study"
 
+
         self.setup_settings()
+        self.setup_timer()
         self.ui.button.clicked.connect(self.start_timer)
         self.ui.actionSettings.triggered.connect(self.open_settings_window)
 
@@ -94,6 +96,9 @@ class MainApp(QtWidgets.QMainWindow):
             with open('config.ini', 'w') as f:
                 config.write(f)
 
+    def setup_timer(self):
+        self.ui.times_studied.setText(
+            f"🍅 {self.studies_today} times today")
     def start_timer(self):
 
         self.ui.button.setText("Pause")
@@ -110,6 +115,7 @@ class MainApp(QtWidgets.QMainWindow):
         self.ui.button.clicked.connect(self.start_timer)
 
     def countdown(self):
+
         if self.remaining_seconds == 0:
             self.timer.stop()
             self.ui.timer_display.setText("00:00")
@@ -125,8 +131,9 @@ class MainApp(QtWidgets.QMainWindow):
                     self.remaining_seconds = self.short_break_time
                 self.last_countdown = "break"
                 self.studies_today += 1
+                self.write_studies_to_file()
                 self.ui.times_studied.setText(
-                    f"🍅 {self.studies_today - 1} times today")
+                    f"🍅 {self.studies_today} times today")
 
                 QtMultimedia.QSound.play(self.beep_noise)
 
@@ -163,6 +170,34 @@ class MainApp(QtWidgets.QMainWindow):
 
             self.ui.timer_display.setText(f"{minutes}:{seconds}")
             self.remaining_seconds -= 1
+
+    def read_studies_from_file(self):
+        history = {}
+
+        try:
+            with open("history.json", 'r') as file:
+                history = json.load(file)
+        except FileNotFoundError:
+            with open('history.json', 'w') as file:
+                json.dump(history, file)
+
+        if str(date.today()) in history.keys():
+            return int((history[str(date.today())]))
+        else:
+            return 0
+
+    def write_studies_to_file(self):
+        with open("history.json", 'r') as file:
+            history = json.load(file)
+
+        if str(date.today()) in history.keys():
+            history[str(date.today())] += 1
+        else:
+            history[str(date.today())] = 1
+
+        with open("history.json", 'w') as file1:
+            json.dump(history,file1)
+
 
 
 def except_hook(cls, exception, traceback):
