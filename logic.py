@@ -2,11 +2,31 @@ from main_window_ui import Ui_MainWindow
 from configparser import ConfigParser
 from PyQt5 import QtWidgets
 from PyQt5 import QtCore
-import settings_window_ui
+import settings_window_ui, calendar_ui
 import sys
 from PyQt5 import QtMultimedia
 from datetime import date
 import json
+
+
+class CalendarWindow(QtWidgets.QWidget):
+    def __init__(self, history, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.history = history
+        self.ui = calendar_ui.Ui_Form()
+        self.ui.setupUi(self)
+        self.show()
+        self.selectedDate()
+        self.ui.calendar.selectionChanged.connect(self.selectedDate)
+
+    def selectedDate(self):
+        if str(self.ui.calendar.selectedDate().toPyDate()) in self.history:
+            self.ui.pomodorTimes.setText(
+                f"🍅 times: {self.history[str(self.ui.calendar.selectedDate().toPyDate())]}")
+        else:
+            self.ui.pomodorTimes.setText(f"🍅 times: 0")
+
+
 class SettingsWindow(QtWidgets.QMainWindow):
     submitted = QtCore.pyqtSignal([str, str, str])
 
@@ -60,23 +80,22 @@ class MainApp(QtWidgets.QMainWindow):
         self.beep_noise = "bugle_tune.wav"  # sound played
         self.last_countdown = ""
 
-        self.studies_today = self.read_studies_from_file()
+        self.history = {}
+        self.studies_today = self.load_history()
         self.last_countdown = "study"
-
 
         self.setup_settings()
         self.setup_timer()
         self.ui.button.clicked.connect(self.start_timer)
         self.ui.actionSettings.triggered.connect(self.open_settings_window)
-
-    def change_times(self, study_time, short_break_time, long_break_time):
-        self.study_time = int(study_time)
-        self.short_break_time = int(short_break_time)
-        self.long_break_time = int(long_break_time)
+        self.ui.pushButton.clicked.connect(self.open_calendar_window)
 
     def open_settings_window(self):
         self.settings_dialog = SettingsWindow()
         self.settings_dialog.submitted.connect(self.change_times)
+
+    def open_calendar_window(self):
+        self.calendar_window = CalendarWindow(self.history)
 
     def setup_settings(self):
         config = ConfigParser()
@@ -96,9 +115,15 @@ class MainApp(QtWidgets.QMainWindow):
             with open('config.ini', 'w') as f:
                 config.write(f)
 
+    def change_times(self, study_time, short_break_time, long_break_time):
+        self.study_time = int(study_time)
+        self.short_break_time = int(short_break_time)
+        self.long_break_time = int(long_break_time)
+
     def setup_timer(self):
         self.ui.times_studied.setText(
             f"🍅 {self.studies_today} times today")
+
     def start_timer(self):
 
         self.ui.button.setText("Pause")
@@ -124,14 +149,18 @@ class MainApp(QtWidgets.QMainWindow):
             self.ui.button.clicked.connect(self.start_timer)
             self.remaining_seconds = self.study_time
 
+
+            self.save_history()
+
             if self.last_countdown == "study":
-                if self.studies_today % 4 == 0:
+                self.studies_today += 1
+
+                if self.studies_today  % 4 == 0:
                     self.remaining_seconds = self.long_break_time
                 else:
                     self.remaining_seconds = self.short_break_time
                 self.last_countdown = "break"
-                self.studies_today += 1
-                self.write_studies_to_file()
+
                 self.ui.times_studied.setText(
                     f"🍅 {self.studies_today} times today")
 
@@ -171,33 +200,29 @@ class MainApp(QtWidgets.QMainWindow):
             self.ui.timer_display.setText(f"{minutes}:{seconds}")
             self.remaining_seconds -= 1
 
-    def read_studies_from_file(self):
-        history = {}
+    def load_history(self):
 
         try:
             with open("history.json", 'r') as file:
-                history = json.load(file)
+                self.history = json.load(file)
         except FileNotFoundError:
             with open('history.json', 'w') as file:
-                json.dump(history, file)
+                json.dump(self.history, file)
 
-        if str(date.today()) in history.keys():
-            return int((history[str(date.today())]))
+        if str(date.today()) in self.history.keys():
+            return int((self.history[str(date.today())]))
         else:
             return 0
 
-    def write_studies_to_file(self):
-        with open("history.json", 'r') as file:
-            history = json.load(file)
+    def save_history(self):
 
-        if str(date.today()) in history.keys():
-            history[str(date.today())] += 1
+        if str(date.today()) in self.history.keys():
+            self.history[str(date.today())] += 1
         else:
-            history[str(date.today())] = 1
+            self.history[str(date.today())] = 1
 
         with open("history.json", 'w') as file1:
-            json.dump(history,file1)
-
+            json.dump(self.history, file1)
 
 
 def except_hook(cls, exception, traceback):

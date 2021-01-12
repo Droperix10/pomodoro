@@ -32,6 +32,9 @@ class Ui_MainWindow(object):
         font.setPointSize(16)
         self.times_studied.setFont(font)
         self.times_studied.setObjectName("times_studied")
+        self.pushButton = QtWidgets.QPushButton(self.centralwidget)
+        self.pushButton.setGeometry(QtCore.QRect(10, 10, 101, 31))
+        self.pushButton.setObjectName("pushButton")
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
         self.menubar.setGeometry(QtCore.QRect(0, 0, 700, 21))
@@ -56,6 +59,7 @@ class Ui_MainWindow(object):
         self.timer_display.setText(_translate("MainWindow", "00:00"))
         self.button.setText(_translate("MainWindow", "Start"))
         self.times_studied.setText(_translate("MainWindow", "🍅 0 times today"))
+        self.pushButton.setText(_translate("MainWindow", "Show calendar"))
         self.menuMenu.setTitle(_translate("MainWindow", "Menu"))
         self.actionSettings.setText(_translate("MainWindow", "Settings"))
 
