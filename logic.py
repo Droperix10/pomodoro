@@ -2,11 +2,25 @@ from main_window_ui import Ui_MainWindow
 from configparser import ConfigParser
 from PyQt5 import QtWidgets
 from PyQt5 import QtCore
+from PyQt5 import QtGui
 import settings_window_ui, calendar_ui
 import sys
 from PyQt5 import QtMultimedia
 from datetime import date
 import json
+
+class NumberValidator(QtGui.QValidator):
+    def validate(self,string,index):
+        if not all (x.isdigit() for x in string):
+            state = QtGui.QValidator.Invalid
+        elif len(string) > 10:
+            state = QtGui.QValidator.Invalid
+        elif len(string) <= 10:
+            state = QtGui.QValidator.Intermediate
+        else:
+            state = QtGui.QValidator.Acceptable
+
+        return (state,string,index)
 
 
 class CalendarWindow(QtWidgets.QWidget):
@@ -40,6 +54,10 @@ class SettingsWindow(QtWidgets.QMainWindow):
         self.setWindowTitle("Settings")
         self.load_settings()
         self.ui.pushButton.clicked.connect(self.save_settings)
+
+        self.ui.pomodoro_length.setValidator(NumberValidator())
+        self.ui.short_break_length.setValidator(NumberValidator())
+        self.ui.long_break_length.setValidator(NumberValidator())
 
     def load_settings(self):
         config = ConfigParser()
