@@ -168,10 +168,11 @@ class MainApp(QtWidgets.QMainWindow):
             self.remaining_seconds = self.study_time
 
 
-            self.save_history()
+
 
             if self.last_countdown == "study":
                 self.studies_today += 1
+                self.save_history()
 
                 if self.studies_today  % 4 == 0:
                     self.remaining_seconds = self.long_break_time
